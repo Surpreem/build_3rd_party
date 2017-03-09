@@ -1,0 +1,7 @@
+using python
+    : 3.6 # version
+    : C:\\Programs\\Miniconda3\\envs\\py36_x64\\python.exe # cmd-or-prefix
+    : C:\\Programs\\Miniconda3\\envs\\py36_x64\\include # includes
+    : C:\\Programs\\Miniconda3\\envs\\py36_x64\\libs # libs
+    : <address-model>64 # address-model
+    ;

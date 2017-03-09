@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Global variables -->
+  <PropertyGroup Label="Globals">
+    <!-- Build configurations -->
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <BuildTarget Condition="'$(BuildTarget)' == ''">BUILD</BuildTarget>
+    <Platform Condition="'$(Platform)' == ''">Win32</Platform>
+    <Framework Condition="'$(Framework)' == ''">gtest</Framework>
+
+    <SlnDir>msvc_$(Platform)</SlnDir>
+
+    <!-- Product version number -->
+    <MajorNo Condition="'$(MajorNo)' == ''">1</MajorNo>
+    <MinorNo Condition="'$(MinorNo)' == ''">8</MinorNo> 
+    <PatchNo Condition="'$(PatchNo)' == ''">0</PatchNo>
+
+    <!-- Date & Time -->
+    <BuildDateTime>$([System.DateTime]::Now.ToString(yyyy.MM.dd. HH:mm:ss))</BuildDateTime>
+  </PropertyGroup>
+  
+  <Choose>
+    <When Condition="'$(Platform)' == 'Win32'">
+      <PropertyGroup>
+        <CmakeGenerator>Visual Studio 14</CmakeGenerator>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <CmakeGenerator>Visual Studio 14 Win64</CmakeGenerator>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <!-- Solutions to build -->
+    <Project Include=".\$(SlnDir)\$(Framework).vcxproj;.\$(SlnDir)\$(Framework)_main.vcxproj">
+      <Configuration>$(Configuration)</Configuration>
+      <Platform>$(Platform)</Platform>
+    </Project>
+
+    <!-- Informations needed to build -->
+    <ArtifactDir Include="..\bin\" />
+    <ProjectDir Include=".\$(SlnDir)\" />
+    <PropertyFile Include=".\$(Configuration)_$(Platform).props" />
+  </ItemGroup>
+
+  <!-- Change global parameter -->
+  <Target Name="SetBuildActionClean">
+    <CreateProperty Value="CLEAN">
+      <Output PropertyName="BuildTarget" TaskParameter="Value"/>
+    </CreateProperty>
+  </Target>
+
+  <!-- Prepare -->
+  <Target Name="Prepare">
+    <Message Text="Target: Prepare" Importance="high" />
+    <MakeDir Directories="@(ArtifactDir)" />
+    <MakeDir Directories="@(ProjectDir)" />
+    <Exec Command='cmake ..\..\ -G "$(CmakeGenerator)"' WorkingDirectory=".\$(SlnDir)\" />
+  </Target>
+
+  <Target Name="Remove">
+    <Message Text="Target: Remove Binary Output Directories" Importance="high" />
+    <RemoveDir Directories="@(ArtifactDir)" />
+  </Target>
+
+  <!-- Clean -->
+  <Target Name="Clean" DependsOnTargets="SetBuildActionClean">
+    <Message Text="Target: Clean" Importance="high" />
+
+    <CallTarget Targets="Remove" />
+    <CallTarget Targets="GoogleFramework" />
+  </Target>
+
+  <!-- Incremental build -->
+  <Target Name="Build" DependsOnTargets="Prepare">
+    <Message Text="Target: Build" Importance="high" />
+    <Message Text="Build ver.: $(MajorNo).$(MinorNo).$(PatchNo).$(BuildNo) $(ProductPhase) $(BuildDateTime)"
+             Importance="high" />
+
+    <CallTarget Targets="GoogleFramework" />
+  </Target>
+
+  <!-- Projects processing -->
+  <Target Name="GoogleFramework">
+    <Message Text="Target: GoogleFramework($(Framework)) - $(BuildTarget)" Importance="high" />
+    <!-- ForceImportBeforeCppTargets는 다른 프로퍼티 없이 단독으로, 전체 경로 지정해 사용해야 함 -->
+    <MSBuild Projects="@(Project)"
+             Targets="$(BuildTarget)"
+             Properties="ForceImportBeforeCppTargets=%(PropertyFile.FullPath)"
+             StopOnFirstFailure="true" />
+  </Target>
+
+</Project>
