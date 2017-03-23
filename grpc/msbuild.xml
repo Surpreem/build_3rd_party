@@ -1,0 +1,217 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Global variables -->
+  <PropertyGroup Label="Globals">
+    <!-- Build configurations -->
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <BuildTarget Condition="'$(BuildTarget)' == ''">BUILD</BuildTarget>
+    <Platform Condition="'$(Platform)' == ''">Win32</Platform>
+
+    <CurDir>$(MSBuildStartupDirectory)</CurDir>
+    <SrcBase>..\grpc_src</SrcBase>
+    <ThirdPartyBase>$(SrcBase)\third_party</ThirdPartyBase>
+    <SlnDir>msvc_$(Platform)</SlnDir>
+    <ProjectDirZlib>$(ThirdPartyBase)\zlib\$(SlnDir)</ProjectDirZlib>
+    <ProjectDirProtocolBuffer>$(ThirdPartyBase)\protobuf\cmake\build\solution</ProjectDirProtocolBuffer>
+    <InstallDirZlib>$(CurDir)\zlib\$(Platform)\$(Configuration)</InstallDirZlib>
+    <InstallDirProtocolBuffer>$(CurDir)\protobuf\$(Platform)\$(Configuration)</InstallDirProtocolBuffer>
+
+    <!-- Product version number -->
+    <MajorNo Condition="'$(MajorNo)' == ''">1</MajorNo>
+    <MinorNo Condition="'$(MinorNo)' == ''">8</MinorNo> 
+    <PatchNo Condition="'$(PatchNo)' == ''">0</PatchNo>
+
+    <!-- Date & Time -->
+    <BuildDateTime>$([System.DateTime]::Now.ToString(yyyy.MM.dd. HH:mm:ss))</BuildDateTime>
+  </PropertyGroup>
+  
+  <Choose>
+    <When Condition="'$(Platform)' == 'Win32'">
+      <PropertyGroup>
+        <CmakeGenerator>Visual Studio 14 2015</CmakeGenerator>
+        <PlatformForBin>x86</PlatformForBin>
+        <GrpcBinSource>$(SrcBase)\vsprojects\$(Configuration)</GrpcBinSource>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <CmakeGenerator>Visual Studio 14 2015 Win64</CmakeGenerator>
+        <PlatformForBin>x64</PlatformForBin>
+        <GrpcBinSource>$(SrcBase)\vsprojects\$(Platform)\$(Configuration)</GrpcBinSource>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <!-- zlib -->
+    <Zlib Include="$(ProjectDirZlib)\zlib.sln">
+      <Configuration>$(Configuration)</Configuration>
+        <Platform>$(Platform)</Platform>
+    </Zlib>
+    <InstallZlib Include="$(ProjectDirZlib)\install.vcxproj">
+      <Configuration>$(Configuration)</Configuration>
+        <Platform>$(Platform)</Platform>
+    </InstallZlib>
+
+    <!-- protocol buffer -->
+    <ProtocolBuffer Include="$(ProjectDirProtocolBuffer)\protobuf.sln">
+      <Configuration>$(Configuration)</Configuration>
+      <Platform>$(Platform)</Platform>
+    </ProtocolBuffer>
+    <InstallProtocolBuffer Include="$(ProjectDirProtocolBuffer)\install.vcxproj">
+      <Configuration>$(Configuration)</Configuration>
+      <Platform>$(Platform)</Platform>
+    </InstallProtocolBuffer>
+
+    <!-- protocol buffer plugin -->
+    <ProtocolBufferPlugin Include="$(SrcBase)\vsprojects\grpc_protoc_plugins.sln">
+      <Configuration>$(Configuration)</Configuration>
+      <Platform>$(Platform)</Platform>
+    </ProtocolBufferPlugin>
+
+    <!-- grpc -->
+    <Grpc Include="$(SrcBase)\vsprojects\grpc.sln">
+      <Configuration>$(Configuration)</Configuration>
+      <Platform>$(Platform)</Platform>
+    </Grpc>
+
+    <!-- Informations needed to build -->
+    <PropertyFile Include=".\$(Configuration)_$(Platform).props" />
+  </ItemGroup>
+
+  <!-- Change linking libraries -->
+  <Target Name="SetDebugLib">
+    <Message Text="Target: Set Libraries for Debug Build" Importance="high" />
+    <ItemGroup>
+      <RegexItems Include="$(SrcBase)\vsprojects\protobuf.props">
+        <Find>libprotobuf.lib</Find>
+        <ReplaceWith>libprotobufd.lib</ReplaceWith>
+        <Options>Singleline</Options>
+      </RegexItems>
+      <RegexItems Include="$(SrcBase)\vsprojects\protoc.props">
+        <Find>libprotoc.lib</Find>
+        <ReplaceWith>libprotocd.lib</ReplaceWith>
+        <Options>Singleline</Options>
+      </RegexItems>
+    </ItemGroup>
+
+    <RegexTransform Items="@(RegexItems)" />
+  </Target>
+
+  <Target Name="SetReleaseLib">
+  <Message Text="Target: Set Libraries for Release Build" Importance="high" />
+    <ItemGroup>
+      <RegexItems Include="$(SrcBase)\vsprojects\protobuf.props">
+        <Find>libprotobufd.lib</Find>
+        <ReplaceWith>libprotobuf.lib</ReplaceWith>
+        <Options>Singleline</Options>
+      </RegexItems>
+      <RegexItems Include="$(SrcBase)\vsprojects\protoc.props">
+        <Find>libprotocd.lib</Find>
+        <ReplaceWith>libprotoc.lib</ReplaceWith>
+        <Options>Singleline</Options>
+      </RegexItems>
+    </ItemGroup>
+
+    <RegexTransform Items="@(RegexItems)" />
+  </Target>
+
+  <!-- Change global parameter -->
+  <Target Name="SetBuildActionClean">
+    <CreateProperty Value="CLEAN">
+      <Output PropertyName="BuildTarget" TaskParameter="Value"/>
+    </CreateProperty>
+  </Target>
+
+  <!-- Prepare -->
+  <Target Name="Prepare">
+    <Message Text="Target: Prepare" Importance="high" />
+    
+    <Message Text="      : Zlib - $(BuildTarget)" Importance="high" />
+    <!-- CMake로 만든 install 프로젝트가 이전 정보 유지하므로 새로 만들어야 함 -->
+    <RemoveDir Directories="$(ProjectDirZlib)" />
+    <MakeDir Directories="$(ProjectDirZlib)" />
+    <Exec Command='cmake -G "$(CmakeGenerator)" -DCMAKE_INSTALL_PREFIX=$(InstallDirZlib) ..'
+          WorkingDirectory="$(ProjectDirZlib)\" />
+    <MSBuild Projects="@(Zlib)" Targets="$(BuildTarget)" StopOnFirstFailure="true" />
+    <MSBuild Projects="@(InstallZlib)" Targets="$(BuildTarget)" StopOnFirstFailure="true" />
+    <SetEnvVar Variable="PATH" Value="$(PATH);$(InstallDirZlib)\bin" />
+    
+    <Message Text="      : Protocol Buffer - $(BuildTarget)" Importance="high" />
+    <!-- x64/x86, Release/Debug 모두 동일 디렉터리 사용하므로 프로젝트 새로 생성 -->
+    <RemoveDir Directories="$(ProjectDirProtocolBuffer)" />
+    <MakeDir Directories="$(ProjectDirProtocolBuffer)" />
+    <Exec Command='cmake -G "$(CmakeGenerator)" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=ON -DCMAKE_INSTALL_PREFIX=$(InstallDirProtocolBuffer) ..\..'
+          WorkingDirectory="$(ProjectDirProtocolBuffer)\" />
+    <MSBuild Projects="@(ProtocolBuffer)" Targets="$(BuildTarget)" StopOnFirstFailure="true" />
+    <MSBuild Projects="@(InstallProtocolBuffer)" Targets="$(BuildTarget)" StopOnFirstFailure="true" />
+  </Target>
+
+  <Target Name="Remove">
+    <Message Text="Target: Remove Binary Output Directories" Importance="high" />
+    <RemoveDir Directories="$(ProjectDirZlib)" />
+    <RemoveDir Directories="$(ProjectDirProtocolBuffer)" />
+  </Target>
+
+  <!-- Clean -->
+  <Target Name="Clean" DependsOnTargets="SetBuildActionClean">
+    <Message Text="Target: Clean" Importance="high" />
+
+    <CallTarget Targets="Remove" />
+    <CallTarget Targets="Grpc" />
+  </Target>
+
+  <!-- Incremental build -->
+  <Target Name="Build" DependsOnTargets="Prepare">
+    <Message Text="Target: Build" Importance="high" />
+    <Message Text="Build ver.: $(MajorNo).$(MinorNo).$(PatchNo).$(BuildNo) $(ProductPhase) $(BuildDateTime)"
+             Importance="high" />
+
+    <CallTarget Targets="Grpc" />
+    <CallTarget Targets="Collect" />
+  </Target>
+
+  <!-- Projects processing -->
+  <Target Name="Grpc">
+    <Message Text="Target: Grpc - $(BuildTarget)" Importance="high" />
+
+    <Message Text="      : Protocol Buffer Plugin - $(BuildTarget)" Importance="high" />
+    <CallTarget Targets="SetReleaseLib" Condition="'$(Configuration)' == 'Release'" />
+    <CallTarget Targets="SetDebugLib" Condition="'$(Configuration)' == 'Debug'" />
+    <MSBuild Projects="@(ProtocolBufferPlugin)" Targets="$(BuildTarget)" StopOnFirstFailure="true" />
+
+    <Message Text="      : Grpc - $(BuildTarget)" Importance="high" />
+    <MSBuild Projects="@(Grpc)" Targets="$(BuildTarget)" StopOnFirstFailure="true" />
+  </Target>
+
+  <Target Name="Collect">
+    <Message Text="Target: Collect - $(BuildTarget)" Importance="high" />
+
+    <Message Text="      : Collect Zlib - $(BuildTarget)" Importance="high" />
+    <Exec Command='robocopy /E /COPYALL "$(InstallDirZlib)\bin" "$(CurDir)\zlib\bin\$(PlatformForBin)\$(Configuration)" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+    <Exec Command='robocopy /E /COPYALL "$(InstallDirZlib)\lib" "$(CurDir)\zlib\lib\$(PlatformForBin)\$(Configuration)" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+    <Exec Command='robocopy /E /COPYALL "$(InstallDirZlib)\include" "$(CurDir)\zlib\include" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+
+    <Message Text="      : Collect Protocol Buffer - $(BuildTarget)" Importance="high" />
+    <Exec Command='robocopy /E /COPYALL "$(InstallDirProtocolBuffer)\bin" "$(CurDir)\protobuf\bin\$(PlatformForBin)\$(Configuration)" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+    <Exec Command='robocopy /E /COPYALL "$(InstallDirProtocolBuffer)\lib" "$(CurDir)\protobuf\lib\$(PlatformForBin)\$(Configuration)" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+    <Exec Command='robocopy /E /COPYALL "$(InstallDirProtocolBuffer)\include" "$(CurDir)\protobuf\include" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+
+    <Exec Command='robocopy /E /COPYALL "$(InstallDirZlib)\bin" "$(CurDir)\protobuf\bin\$(PlatformForBin)\$(Configuration)" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+
+    <Message Text="      : Collect Grpc - $(BuildTarget)" Importance="high" />
+    <Exec Command='robocopy /E /COPYALL "$(GrpcBinSource)" "$(CurDir)\grpc\bin\$(PlatformForBin)\$(Configuration)" *.exe *.dll &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+    <Exec Command='robocopy /E /COPYALL "$(GrpcBinSource)" "$(CurDir)\grpc\lib\$(PlatformForBin)\$(Configuration)" *.lib &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+    <Exec Command='robocopy /E /COPYALL "$(GrpcBinSource)" "$(CurDir)\grpc\pdb\$(PlatformForBin)\$(Configuration)" *.pdb &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+    <Exec Command='robocopy /E /COPYALL "$(SrcBase)\include" "$(CurDir)\grpc\include" &amp; IF %ERRORLEVEL% LEQ 1 exit 0' />
+
+    <Exec Command='rmdir /S /Q "$(CurDir)\zlib\$(Platform)"' />
+    <Exec Command='rmdir /S /Q "$(CurDir)\protobuf\$(Platform)"' />
+
+  </Target>
+
+  <UsingTask TaskName="RegexTransform" AssemblyFile="SurpMSBuildTasks.dll" />
+  <UsingTask TaskName="SetEnvVar" AssemblyFile="SurpMSBuildTasks.dll" />
+
+</Project>
