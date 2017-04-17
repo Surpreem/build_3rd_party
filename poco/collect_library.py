@@ -7,6 +7,7 @@ import shutil
 
 root_dir = os.getcwd()
 dest_root_dir = os.path.join(os.pardir, 'poco')
+components_cppunit = ['CppUnit', 'CppUnit/WinTestRunner']
 lib_dir = [
     'bin',
     'lib',
@@ -53,12 +54,16 @@ def delete_temp_files():
 def copy_headers(components, dest_root):
     include_dir = 'include'
     for component in components:
-        src_dir = os.path.join(os.path.join(root_dir, component), include_dir)
-        dest_dir = os.path.join(os.path.join(dest_root, component), include_dir)
-        try:
-            shutil.copytree(src_dir, dest_dir)
-        except FileNotFoundError:
-            pass
+        if component in components_cppunit:
+            target_dir = poco_dir = ''
+            if component == components_cppunit[1]:
+                target_dir = components_cppunit[0]
+        else:
+            target_dir = poco_dir = 'Poco'
+        src_dir = os.path.join(
+            os.path.join(os.path.join(root_dir, component), include_dir), poco_dir)
+        dest_dir = os.path.join(os.path.join(dest_root, include_dir), target_dir)
+        os.system('robocopy /E /COPYALL {} {}'.format(src_dir, dest_dir))
 
 
 def copy_library(dest_root):
