@@ -1,0 +1,23 @@
+@echo off
+SETLOCAL
+if "%1" == "" goto HELP
+
+call set_boost.cmd
+call "%VS140COMNTOOLS%\..\..\vc\vcvarsall.bat" x86
+msbuild msbuild.xml %*
+ENDLOCAL
+exit /b %ERRORLEVEL%
+
+:HELP
+echo.
+echo build_x86 [/t:^<target^>] [/p:^<parameter=value^>]
+echo.
+echo * target list
+echo  - Clean: Clean projects
+echo  - Build: Build projects
+echo.
+echo * parameter list (name = values)
+echo  - Configuration = Debug, Release (default: Debug)
+echo.
+
+:QUIT
