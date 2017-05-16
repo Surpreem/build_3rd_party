@@ -1,8 +1,14 @@
 @echo off
 SETLOCAL
 if "%1" == "" goto HELP
-call "%VS140COMNTOOLS%\..\..\vc\vcvarsall.bat" x86
+
+for /f "usebackq tokens=*" %%i in (`vswhere -latest -products * -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath`) do (
+    set InstallDir=%%i
+)
+
+call "%InstallDir%\Common7\Tools\VsDevCmd.bat"
 msbuild msbuild.xml %*
+
 ENDLOCAL
 exit /b %ERRORLEVEL%
 

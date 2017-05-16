@@ -23,12 +23,12 @@
   <Choose>
     <When Condition="'$(Platform)' == 'Win32'">
       <PropertyGroup>
-        <CmakeGenerator>Visual Studio 14 2015</CmakeGenerator>
+        <CmakeGenerator>Visual Studio 15 2017</CmakeGenerator>
       </PropertyGroup>
     </When>
     <Otherwise>
       <PropertyGroup>
-        <CmakeGenerator>Visual Studio 14 2015 Win64</CmakeGenerator>
+        <CmakeGenerator>Visual Studio 15 2017 Win64</CmakeGenerator>
       </PropertyGroup>
     </Otherwise>
   </Choose>

@@ -13,7 +13,7 @@ POCO C++ 라이브러리를 윈도우 환경에서 간편하게 빌드하려고 
 * [POCO](https://pocoproject.org)
 * [OpenSSL](https://slproweb.com/products/Win32OpenSSL.html) (선택)
 * [MySql](https://dev.mysql.com/downloads/mysql/) (선택)
-* Visual Studio 2015
+* Visual Studio 2017
 * Python (추가 스크립트 사용할 때만 필요)
 
 

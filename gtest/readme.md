@@ -14,7 +14,7 @@
 
 * [Google Test](https://github.com/google/googletest)
 * [CMake](https://cmake.org/)
-* Visual Studio 2015
+* Visual Studio 2017
 
 
 ## 빌드 방법

@@ -15,7 +15,7 @@
 
 * [Boost 라이브러리](http://www.boost.org/)
 * Python (Boost.Python 사용하면 필요)
-* Visual Studio 2015
+* Visual Studio 2017
 
 
 ## 빌드 방법
